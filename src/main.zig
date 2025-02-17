@@ -54,15 +54,15 @@ const Context = struct {
         return error.Leak;
     }
 
-    pub fn eval(self: Self, code: []const u8, filename: [*c]const u8, flag: EvalFlag) !void {
+    pub fn eval(self: Self, code: []const u8, filename: [*c]const u8, flag: EvalFlag) !Value {
         if (self.ctx == null) {
             return error.BadContext;
         }
         const res = c.JS_Eval(self.ctx, code.ptr, code.len, filename, @intCast(@intFromEnum(flag)));
-        if (c.JS_IsException(res) != 0) {
-            return error.EvalError;
-        }
-        defer c.JS_FreeValue(self.ctx, res);
+        return Value{
+            .ctx = self,
+            .val = res,
+        };
     }
 
     pub fn getGlobalObject(self: Self) !Value {
@@ -117,6 +117,10 @@ const Value = struct {
         }
         return error.BadContext;
     }
+
+    pub fn isException(self: Self) bool {
+        return c.JS_IsException(self.val) != 0;
+    }
 };
 
 const CString = struct {
@@ -143,7 +147,7 @@ pub fn main() !void {
         \\var answer;
         \\answer = 42;
     ;
-    try ctx.eval(code, "<input>", .async_);
+    try tryEval(ctx, code);
 
     const prop = try ctx.getPropertyStr(global, "answer");
     defer prop.free() catch |err| std.debug.print("defer failed: {}\n", .{err});
@@ -155,4 +159,13 @@ pub fn main() !void {
 fn dumpError(ctx: Context, val: Value) !void {
     const str = try ctx.toCString(val);
     std.debug.print("Error: {}\n", .{str.ptr.*});
+}
+
+fn tryEval(ctx: Context, code: []const u8) !void {
+    const res = try ctx.eval(code, "<input>", .async_);
+    if (res.isException()) {
+        try dumpError(ctx, res);
+        return error.EvalError;
+    }
+    defer res.free() catch |err| std.debug.print("defer failed: {}\n", .{err});
 }
