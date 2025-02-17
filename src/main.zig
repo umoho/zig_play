@@ -144,8 +144,9 @@ pub fn main() !void {
     defer global.free() catch |err| std.debug.print("defer failed: {}\n", .{err});
 
     const code: []const u8 =
+        \\const mul = x => y => x * y;
         \\var answer;
-        \\answer = 42;
+        \\answer = mul(6)(7);
     ;
     try tryEval(ctx, code);
 
