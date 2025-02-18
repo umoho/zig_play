@@ -39,5 +39,5 @@ const Args = @import("root.zig").FunctionArgs;
 
 fn myFn(ctx: Context, _: Value, _: Args) Value {
     std.debug.print("Hello from Zig\n", .{});
-    return ctx.newInt32(0);
+    return ctx.newNumber(i32, 0);
 }

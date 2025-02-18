@@ -199,6 +199,58 @@ pub const Context = struct {
         };
     }
 
+    pub fn newInt64(self: Self, val: i64) Value {
+        const value = c.JS_NewInt64(self.ctx, val);
+        return .{
+            .ctx = self,
+            .val = value,
+        };
+    }
+
+    pub fn newUInt32(self: Self, val: u32) Value {
+        const value = c.JS_NewUint32(self.ctx, val);
+        return .{
+            .ctx = self,
+            .val = value,
+        };
+    }
+
+    pub fn newBigInt64(self: Self, val: i64) Value {
+        const value = c.JS_NewBigInt64(self.ctx, val);
+        return .{
+            .ctx = self,
+            .val = value,
+        };
+    }
+
+    pub fn newBigUInt64(self: Self, val: i64) Value {
+        const value = c.JS_NewBigUint64(self.ctx, val);
+        return .{
+            .ctx = self,
+            .val = value,
+        };
+    }
+
+    pub fn newFloat64(self: Self, val: f64) Value {
+        const value = c.JS_NewFloat64(self.ctx, val);
+        return .{
+            .ctx = self,
+            .val = value,
+        };
+    }
+
+    pub fn newNumber(self: Self, comptime T: type, val: T) Value {
+        return switch (T) {
+            i32 => self.newInt32(val),
+            i64 => self.newInt64(val),
+            u32 => self.newUInt32(val),
+            f64 => self.newFloat64(val),
+            struct { .big_i64_val } => self.newBigInt64(val.big_i64_val),
+            struct { .big_u64_val } => self.newBigUInt64(val.big_u64_val),
+            else => @compileError("type" ++ @typeName(T) ++ " is not a kind of number"),
+        };
+    }
+
     pub fn newFunction(self: Self, function: Function, name: [*c]const u8, arg_length: usize) Value {
         const res = c.JS_NewCFunction(self.ctx, toCFunction(function), name, @intCast(arg_length));
         return Value{
