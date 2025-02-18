@@ -5,11 +5,21 @@ const c = @cImport({
     @cInclude("/opt/homebrew/include/quickjs/quickjs.h");
 });
 
+/// QuickJS Runtime.
 pub const Runtime = struct {
     rt: ?*c.JSRuntime,
 
     const Self = @This();
 
+    /// Create a new QuickJS runtime. Call `free` to release resources.
+    ///
+    /// # Errors
+    ///
+    /// - `error.CreateRuntimeError` if the runtime cannot be created.
+    ///
+    /// # Returns
+    ///
+    /// A new QuickJS runtime.
     pub fn new() !Self {
         const rt = c.JS_NewRuntime();
         if (rt == null) {
@@ -18,6 +28,11 @@ pub const Runtime = struct {
         return Self{ .rt = rt };
     }
 
+    /// Free the QuickJS runtime.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadRuntime` if the runtime is null.
     pub fn free(self: *Runtime) !void {
         if (self.rt != null) {
             c.JS_FreeRuntime(self.rt);
@@ -26,6 +41,7 @@ pub const Runtime = struct {
     }
 };
 
+/// Flags for `Context.eval`.
 pub const EvalFlag = enum(c_int) {
     async_ = c.JS_EVAL_FLAG_ASYNC,
     backtrace_barrier = c.JS_EVAL_FLAG_BACKTRACE_BARRIER,
@@ -33,11 +49,21 @@ pub const EvalFlag = enum(c_int) {
     strip = c.JS_EVAL_FLAG_STRIP,
 };
 
+/// QuickJS context.
 pub const Context = struct {
     ctx: ?*c.JSContext,
 
     const Self = @This();
 
+    /// Create a new QuickJS context. Call `free` to release resources.
+    ///
+    /// # Errors
+    ///
+    /// - `error.CreateContextError` if the context cannot be created.
+    ///
+    /// # Returns
+    ///
+    /// A new QuickJS context.
     pub fn new(rt: Runtime) !Self {
         const ctx = c.JS_NewContext(rt.rt);
         if (ctx == null) {
@@ -46,6 +72,11 @@ pub const Context = struct {
         return Self{ .ctx = ctx };
     }
 
+    /// Free the QuickJS context.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
     pub fn free(self: Self) !void {
         if (self.ctx == null) {
             return error.BadContext;
@@ -54,6 +85,11 @@ pub const Context = struct {
         return;
     }
 
+    /// Evaluate JavaScript code. Call `Value.free` to release resources.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
     pub fn eval(self: Self, code: []const u8, filename: [*c]const u8, flag: EvalFlag) !Value {
         if (self.ctx == null) {
             return error.BadContext;
@@ -65,6 +101,11 @@ pub const Context = struct {
         };
     }
 
+    /// Get the global object. Call `Value.free` to release resources.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
     pub fn getGlobalObject(self: Self) !Value {
         if (self.ctx == null) {
             return error.BadContext;
@@ -76,6 +117,11 @@ pub const Context = struct {
         };
     }
 
+    /// Get a property from the global object. Call `Value.free` to release resources.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
     pub fn getPropertyStr(self: Self, global: Value, name: [*c]const u8) !Value {
         if (self.ctx == null) {
             return error.BadContext;
@@ -87,6 +133,11 @@ pub const Context = struct {
         };
     }
 
+    /// Set a property on the global object.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
     pub fn setPropertyStr(self: Self, global: Value, name: [*c]const u8, value: Value) !void {
         if (self.ctx == null) {
             return error.BadContext;
@@ -95,6 +146,12 @@ pub const Context = struct {
         _ = c.JS_SetPropertyStr(self.ctx, global.val, name, value.val);
     }
 
+    /// Convert a value to an i32.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
+    /// - `error.ConvertError` if the value cannot be converted.
     pub fn toInt32(self: Self, prop: Value) !i32 {
         if (self.ctx == null) {
             return error.BadContext;
@@ -106,6 +163,12 @@ pub const Context = struct {
         return ans;
     }
 
+    /// Convert a value to a C string. Call `CString.free` to release resources.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
+    /// - `error.ConvertError` if the value cannot be converted.
     pub fn toCString(self: Self, val: Value) !CString {
         if (self.ctx == null) {
             return error.BadContext;
@@ -117,6 +180,15 @@ pub const Context = struct {
         return CString{ .ctx = self, .ptr = cstr };
     }
 
+    /// Create a new i32 value. Call `Value.free` to release resources.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
+    ///
+    /// # Returns
+    ///
+    /// A new i32 value.
     pub fn newInt32(self: Self, val: i32) !Value {
         if (self.ctx == null) {
             return error.BadContext;
@@ -129,12 +201,18 @@ pub const Context = struct {
     }
 };
 
+/// QuickJS value.
 pub const Value = struct {
     ctx: Context,
     val: c.JSValue,
 
     const Self = @This();
 
+    /// Free the QuickJS value.
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
     pub fn free(self: Self) !void {
         if (self.ctx.ctx != null) {
             c.JS_FreeValue(self.ctx.ctx, self.val);
@@ -143,17 +221,24 @@ pub const Value = struct {
         return error.BadContext;
     }
 
+    /// Check if the value is an exception.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the value is an exception, `false` otherwise.
     pub fn isException(self: Self) bool {
         return c.JS_IsException(self.val) != 0;
     }
 };
 
+/// C string wrapper.
 pub const CString = struct {
     ctx: Context,
     ptr: [*c]const u8,
 
     const Self = @This();
 
+    /// Free the C string.
     pub fn free(self: Self) void {
         c.JS_FreeCString(self.ctx.ctx, self.ptr);
     }
