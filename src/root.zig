@@ -34,10 +34,11 @@ pub const Runtime = struct {
     ///
     /// - `error.BadRuntime` if the runtime is null.
     pub fn free(self: *Runtime) !void {
-        if (self.rt != null) {
-            c.JS_FreeRuntime(self.rt);
-            self.rt = null;
+        if (self.rt == null) {
+            return error.BadRuntime;
         }
+        c.JS_FreeRuntime(self.rt);
+        self.rt = null;
     }
 };
 
@@ -82,7 +83,8 @@ pub const Context = struct {
             return error.BadContext;
         }
         c.JS_FreeContext(self.ctx);
-        return;
+        // TODO: fix 'error: cannot assign to constant'.
+        // self.ctx = null;
     }
 
     /// Evaluate JavaScript code. Call `Value.free` to release resources.
@@ -214,11 +216,10 @@ pub const Value = struct {
     ///
     /// - `error.BadContext` if the context is null.
     pub fn free(self: Self) !void {
-        if (self.ctx.ctx != null) {
-            c.JS_FreeValue(self.ctx.ctx, self.val);
-            return;
+        if (self.ctx.ctx == null) {
+            return error.BadContext;
         }
-        return error.BadContext;
+        c.JS_FreeValue(self.ctx.ctx, self.val);
     }
 
     /// Check if the value is an exception.
@@ -239,14 +240,27 @@ pub const CString = struct {
     const Self = @This();
 
     /// Free the C string.
-    pub fn free(self: Self) void {
+    ///
+    /// # Errors
+    ///
+    /// - `error.BadContext` if the context is null.
+    /// - `error.DoubleFreeCString` if the pointer is null.
+    pub fn free(self: Self) !void {
+        if (self.ctx.ctx == null) {
+            return error.BadContext;
+        }
+        if (self.ptr == null) {
+            return error.DoubleFreeCString;
+        }
         c.JS_FreeCString(self.ctx.ctx, self.ptr);
+        // TODO: fix 'error: cannot assign to constant'.
+        // self.ptr = null;
     }
 };
 
 fn dumpError(ctx: Context, val: Value) !void {
     const str = try ctx.toCString(val);
-    defer str.free();
+    defer str.free() catch |err| std.debug.print("defer failed: {}\n", .{err});
     std.debug.print("Error: {}\n", .{str.ptr.*});
 }
 
