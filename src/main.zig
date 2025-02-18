@@ -28,7 +28,7 @@ const Runtime = struct {
 
 const EvalFlag = enum(c_int) {
     async_ = c.JS_EVAL_FLAG_ASYNC,
-    blacktrace_barrier = c.JS_EVAL_FLAG_BACKTRACE_BARRIER,
+    backtrace_barrier = c.JS_EVAL_FLAG_BACKTRACE_BARRIER,
     strict = c.JS_EVAL_FLAG_STRICT,
     strip = c.JS_EVAL_FLAG_STRIP,
 };
