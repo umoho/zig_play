@@ -17,7 +17,11 @@ pub fn main() !void {
 
     try ctx.setPropertyStr(global, "six", try ctx.newInt32(6));
 
+    const func = try ctx.newFunction(myFn, "greet", 0);
+    try ctx.setPropertyStr(global, "greet", func);
+
     const code: []const u8 =
+        \\greet();
         \\const mul = x => y => x * y;
         \\var answer;
         \\answer = mul(six)(7);
@@ -29,4 +33,11 @@ pub fn main() !void {
 
     const answer = try ctx.toInt32(prop);
     std.debug.print("Answer: {}\n", .{answer});
+}
+
+const Args = @import("root.zig").FunctionArgs;
+
+fn myFn(ctx: Context, _: Value, _: Args) !Value {
+    std.debug.print("Hello from Zig\n", .{});
+    return ctx.newInt32(0);
 }

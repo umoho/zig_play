@@ -201,6 +201,22 @@ pub const Context = struct {
             .val = value,
         };
     }
+
+    pub fn newFunction(self: Self, function: Function, name: [*c]const u8, arg_length: usize) !Value {
+        const res = c.JS_NewCFunction(self.ctx, toCFunction(function), name, @intCast(arg_length));
+        return Value{
+            .ctx = self,
+            .val = res,
+        };
+    }
+
+    pub fn throw(self: Self, val: Value) !Value {
+        const res = c.JS_Throw(self.ctx, val.val);
+        return Value{
+            .ctx = self,
+            .val = res,
+        };
+    }
 };
 
 /// QuickJS value.
@@ -271,4 +287,31 @@ pub fn tryEval(ctx: Context, code: []const u8) !void {
         return error.EvalError;
     }
     defer res.free() catch |err| std.debug.print("defer failed: {}\n", .{err});
+}
+
+pub const FunctionArgs = struct {
+    argc: usize,
+    argv: [*]Value,
+};
+pub const Function = fn (ctx: Context, this: Value, args: FunctionArgs) error{BadContext}!Value;
+
+/// Convert a function to a C function pointer.
+fn toCFunction(function: Function) ?*c.JSCFunction {
+    const Wrapper = struct {
+        fn handler(
+            ctx: ?*c.JSContext,
+            this_val: c.JSValueConst,
+            argc: c_int,
+            argv: [*c]c.JSValueConst,
+        ) callconv(.C) c.JSValue {
+            const ctxt = .{ .ctx = ctx };
+            const this = .{ .ctx = ctxt, .val = this_val };
+            const args = FunctionArgs{ .argc = @intCast(argc), .argv = @ptrCast(argv) };
+            const value = function(ctxt, this, args) catch {
+                @panic("context is null");
+            };
+            return value.val;
+        }
+    };
+    return @constCast(&Wrapper.handler);
 }
