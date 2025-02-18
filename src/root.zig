@@ -191,10 +191,7 @@ pub const Context = struct {
     /// # Returns
     ///
     /// A new i32 value.
-    pub fn newInt32(self: Self, val: i32) !Value {
-        if (self.ctx == null) {
-            return error.BadContext;
-        }
+    pub fn newInt32(self: Self, val: i32) Value {
         const value = c.JS_NewInt32(self.ctx, val);
         return Value{
             .ctx = self,
@@ -202,7 +199,7 @@ pub const Context = struct {
         };
     }
 
-    pub fn newFunction(self: Self, function: Function, name: [*c]const u8, arg_length: usize) !Value {
+    pub fn newFunction(self: Self, function: Function, name: [*c]const u8, arg_length: usize) Value {
         const res = c.JS_NewCFunction(self.ctx, toCFunction(function), name, @intCast(arg_length));
         return Value{
             .ctx = self,
@@ -210,7 +207,7 @@ pub const Context = struct {
         };
     }
 
-    pub fn throw(self: Self, val: Value) !Value {
+    pub fn throw(self: Self, val: Value) Value {
         const res = c.JS_Throw(self.ctx, val.val);
         return Value{
             .ctx = self,
@@ -293,7 +290,7 @@ pub const FunctionArgs = struct {
     argc: usize,
     argv: [*]Value,
 };
-pub const Function = fn (ctx: Context, this: Value, args: FunctionArgs) error{BadContext}!Value;
+pub const Function = fn (ctx: Context, this: Value, args: FunctionArgs) Value;
 
 /// Convert a function to a C function pointer.
 fn toCFunction(function: Function) ?*c.JSCFunction {
@@ -307,9 +304,7 @@ fn toCFunction(function: Function) ?*c.JSCFunction {
             const ctxt = .{ .ctx = ctx };
             const this = .{ .ctx = ctxt, .val = this_val };
             const args = FunctionArgs{ .argc = @intCast(argc), .argv = @ptrCast(argv) };
-            const value = function(ctxt, this, args) catch {
-                @panic("context is null");
-            };
+            const value = function(ctxt, this, args);
             return value.val;
         }
     };

@@ -15,9 +15,9 @@ pub fn main() !void {
     var global = try ctx.getGlobalObject();
     defer global.free() catch |err| std.debug.print("defer failed: {}\n", .{err});
 
-    try ctx.setPropertyStr(global, "six", try ctx.newInt32(6));
+    try ctx.setPropertyStr(global, "six", ctx.newInt32(6));
 
-    const func = try ctx.newFunction(myFn, "greet", 0);
+    const func = ctx.newFunction(myFn, "greet", 0);
     try ctx.setPropertyStr(global, "greet", func);
 
     const code: []const u8 =
@@ -37,7 +37,7 @@ pub fn main() !void {
 
 const Args = @import("root.zig").FunctionArgs;
 
-fn myFn(ctx: Context, _: Value, _: Args) !Value {
+fn myFn(ctx: Context, _: Value, _: Args) Value {
     std.debug.print("Hello from Zig\n", .{});
     return ctx.newInt32(0);
 }
