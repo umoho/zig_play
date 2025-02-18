@@ -87,6 +87,14 @@ pub const Context = struct {
         };
     }
 
+    pub fn setPropertyStr(self: Self, global: Value, name: [*c]const u8, value: Value) !void {
+        if (self.ctx == null) {
+            return error.BadContext;
+        }
+        // TODO: check the return value.
+        _ = c.JS_SetPropertyStr(self.ctx, global.val, name, value.val);
+    }
+
     pub fn toInt32(self: Self, prop: Value) !i32 {
         var ans: i32 = 0;
         if (c.JS_ToInt32(self.ctx, &ans, prop.val) != 0) {
@@ -101,6 +109,17 @@ pub const Context = struct {
             return error.ConvertError;
         }
         return CString{ .ctx = self, .ptr = cstr };
+    }
+
+    pub fn newInt32(self: Self, val: i32) !Value {
+        if (self.ctx == null) {
+            return error.BadContext;
+        }
+        const value = c.JS_NewInt32(self.ctx, val);
+        return Value{
+            .ctx = self,
+            .val = value,
+        };
     }
 };
 

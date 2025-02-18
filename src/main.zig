@@ -15,10 +15,12 @@ pub fn main() !void {
     var global = try ctx.getGlobalObject();
     defer global.free() catch |err| std.debug.print("defer failed: {}\n", .{err});
 
+    try ctx.setPropertyStr(global, "six", try ctx.newInt32(6));
+
     const code: []const u8 =
         \\const mul = x => y => x * y;
         \\var answer;
-        \\answer = mul(6)(7);
+        \\answer = mul(six)(7);
     ;
     try tryEval(ctx, code);
 
