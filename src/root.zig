@@ -47,11 +47,11 @@ pub const Context = struct {
     }
 
     pub fn free(self: Self) !void {
-        if (self.ctx != null) {
-            c.JS_FreeContext(self.ctx);
-            return;
+        if (self.ctx == null) {
+            return error.BadContext;
         }
-        return error.Leak;
+        c.JS_FreeContext(self.ctx);
+        return;
     }
 
     pub fn eval(self: Self, code: []const u8, filename: [*c]const u8, flag: EvalFlag) !Value {
@@ -96,6 +96,9 @@ pub const Context = struct {
     }
 
     pub fn toInt32(self: Self, prop: Value) !i32 {
+        if (self.ctx == null) {
+            return error.BadContext;
+        }
         var ans: i32 = 0;
         if (c.JS_ToInt32(self.ctx, &ans, prop.val) != 0) {
             return error.ConvertError;
@@ -104,6 +107,9 @@ pub const Context = struct {
     }
 
     pub fn toCString(self: Self, val: Value) !CString {
+        if (self.ctx == null) {
+            return error.BadContext;
+        }
         const cstr = c.JS_ToCString(self.ctx, val.val);
         if (cstr == null) {
             return error.ConvertError;
