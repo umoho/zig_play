@@ -100,7 +100,7 @@ pub const Context = struct {
         if (cstr == null) {
             return error.ConvertError;
         }
-        return CString{ .ptr = cstr };
+        return CString{ .ctx = self, .ptr = cstr };
     }
 };
 
@@ -124,17 +124,19 @@ pub const Value = struct {
 };
 
 pub const CString = struct {
+    ctx: Context,
     ptr: [*c]const u8,
 
     const Self = @This();
 
     pub fn free(self: Self) void {
-        c.JS_FreeCString(self.ptr);
+        c.JS_FreeCString(self.ctx.ctx, self.ptr);
     }
 };
 
 fn dumpError(ctx: Context, val: Value) !void {
     const str = try ctx.toCString(val);
+    defer str.free();
     std.debug.print("Error: {}\n", .{str.ptr.*});
 }
 
